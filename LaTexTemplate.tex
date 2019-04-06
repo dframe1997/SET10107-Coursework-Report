@@ -1,0 +1,58 @@
+\documentclass[sigconf]{acmart}
+
+\usepackage{booktabs} % For formal tables
+
+
+
+
+\begin{document}
+\title{Computational Intelligence Coursework}
+\acmConference[SET10107]{Coursework}{April 2018}{Edinburgh Napier University} 
+\acmYear{2018}
+\copyrightyear{2018}
+
+\author{40200819}
+
+
+
+\begin{abstract}
+Abstract goes here
+\end{abstract}
+
+
+
+%\keywords{ACM proceedings, \LaTeX, text tagging}
+
+
+\maketitle
+
+\section{Introduction}
+
+\section{Methodology}
+This algorithm uses genetic programming to learn how to land a rocket on a pad in a simulated environment. This is done by evolving the weights of a neural network, which then controls the rockets. The evolutionary algorithm is tuned to reduce the fitness to around 0.01, as any lower could result in overfitting \textbf{reference}.
+
+The algorithm was initially tested by running it in the GUI and watching to see how well it performed on the graph. This approach allowed the author to quickly make changes and see the results without spending a lot of time making tables and graphs. After finding a solution that worked well, the author then benchmarked it by running the algorithm 10 times and recording the average fitness of each run. They also recorded the best fitness of each run and the fitness of each set of weights when applied to the test dataset.
+
+These results were graphed, with each solution as a different series to show how they compared. This approach reduced the risk of outliers skewing an otherwise good set of runs.
+
+The range of results for each solution was also recorded, which helped the author tune the results for consistency. This was done using a box plot for the average fitness, best fitness and test fitness.
+
+The boxplots use an X to indicate the mean and a line to indicate the median. Solution one has a large spread of results, with an IQR of roughly 0.029 to 0.101. This makes the results quite inconsistent, with the test dataset's results having a huge IQR of roughly 0.02 to 0.221.
+\subsection{Selection}
+Tournament selection with 3 members. The author experimented with the number of tournament members and 3 was the best. At the time of testing, the value didn't seem to affect the overall fitness, though this may have changed since.
+\subsection{Crossover}
+The algorithm started by using single point crossover at a random position, though the author tried splitting the data down the middle - taking half of each parents genes for the child. This was expanded later as the algorithm was re-written to allow any number of parents to be chosen (within reason). This new approach splits the chromosome into as many parts as there are parents, giving a slice of each parent to the child's chromosome.
+
+This new approach was quite successful as it maintained diversity, but having too many parents caused some issues with never finding a solution as the best parents were drowned out. The benchmark algorithm reduced the number of parents back to 2, with the option to further experiment open for future solutions.
+\subsection{Replacement}
+\subsection{Parameters}
+According to
+https://stats.stackexchange.com/questions/181/how-to-choose-the-number-of-hidden-layers-and-nodes-in-a-feedforward-neural-netw
+The number of hidden layers should be 1 for most problems, and the number of nodes per hidden layer should be between the number of input nodes (5 in our case) and the number of output nodes (3 in our case). Following this rule, 4 is the optimal amount and therefore is the amount chosen for this algorithm.
+\section{Results}
+\section{Conclusion}
+
+%\bibliographystyle{ACM-Reference-Format}
+\bibliography{sigproc} 
+
+\end{document}
