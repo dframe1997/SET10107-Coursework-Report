@@ -34,7 +34,9 @@ This report details the development of an evolutionary algorithm that evolves th
 \maketitle
 
 \section{Introduction}
-Evolutionary algorithms allow us to find good solutions to problems that don't necessarily have answers yet, in a process similar to biological evolution \cite{evoAlgIntro}. A population is initialised randomly and each member's fitness is evaluated - a function of their ability to solve the problem. Measuring and evaluating the fitness of each attempt allows the algorithm to select and breed (crossover) the better ones to create children - an exploitation of the best members in the population \cite{exploreExploit}. Mutation allows the algorithm to explore new options by changing genes by a certain amount, according to a predetermined chance variable. Finally, the worst members of the population are replaced with the newly created children. Running the algorithm multiple times allows it to approach a solution - in this case a set of weights for a neural network - that can ideally also work well on a new 'test' data set.
+Evolutionary algorithms allow us to find good solutions to problems that don't necessarily have answers yet, in a process similar to biological evolution \cite{evoAlgIntro}. A population is initialised randomly and each member's fitness, a function of their ability to solve the problem, is evaluated. Measuring and evaluating the fitness of each attempt allows the algorithm to select and breed (crossover) the better ones to create children - an exploitation of the best members in the population \cite{exploreExploit}. Mutation allows the algorithm to explore new options by changing genes by a certain amount, according to a predetermined chance variable. Finally, the worst members of the population are replaced with the newly created children. Running the algorithm multiple times allows it to approach a solution - in this case a set of weights for a neural network - that can ideally also work well on a new 'test' data set.
+
+The algorithm developed alongside this report is built from the example evolutionary algorithm provided with the coursework project template. This report will refer to solutions by number, in order of their creation - eg: 'Solution One'. These solutions are explored in depth in the Experiments \& Analysis section.
 
 \section{Approach}
 This algorithm incorporates evolutionary programming to land rockets on a pad in a simulated environment, whilst trying to use as much fuel as possible. This is done by evolving the weights of a neural network, which is then used to control the rockets. 
@@ -44,51 +46,47 @@ The goal of this project was to design an appropriate evolutionary algorithm tha
 The following subsections describe the algorithm's various operators in detail, including why they were used and what parameters were chosen to optimise them.
 
 \subsection{Selection}
-When choosing a selection method, various options were researched including roulette and rank selection. Tournament selection was chosen as it appeared to be the simplest to start with and provided a good benchmark to build from. It also gives every member of the population an equal chance of being chosen, which should maintain diversity \cite{tournament}.
+When choosing a selection method, various options were researched including roulette and rank selection. Tournament selection was chosen as it appeared to be the simplest to start with and provided a good benchmark to build from. Tournament selection works by choosing a random group of members from the population and then picking the best one from the group \cite{tournament3}. This gives every member of the population a chance of being chosen, which should maintain diversity \cite{tournament} and naturally provides rank based selection for a low computational cost \cite{tournament2}.
 
-The author experimented with the number of tournament members, finding 8 to be the best. This was found by measuring the average and best fitness for 5 runs, for various amounts of tournament members. These results are shown in the graph below:
+The number of members competing in each tournament is known as the tournament size. The author experimented with this value, finding a tournament size of 8 to be the best. This may be because a high tournament size increases selection pressure, which allows the algorithm to quickly converge on a good solution within the 20000 evaluations limit \cite{selectionPressure}. This could be optimised in the future by running a full scientific test on the algorithm with multiple tournament sizes to find the best possible tournament size. The author attempted to do this early in the project (before the creation of solution one) but unfortunately saw no correlation between tournament size and fitness, possibly because of other factors such as low mutation values and an unoptimised algorithm. This experiment can be seen in the graph below. Each tournament size had 5 runs, with the average fitness across all of them recorded on the graph.
 
-Initially, tournament contenders were chosen randomly from the population, this worked fine, but the author decided to adjust this to improve the chance of a good parent being selected. This was accomplished by ordering the population from highest to lowest fitness and requiring the participants to be within the best 75\% of the population. The author found that this did not drastically impact the diversity of the population as the lowest 25\% were replaced very frequently anyway.
+\begin{figure}[H]
+\includegraphics[width=\columnwidth]{useless.png}
+\caption[width=\columnwidth]{This experiment, conducted early in the process, didn't help to find a good tournament size} \label{Useless}
+\end{figure}
+
+Initially, tournament contenders were chosen randomly from the population as is standard for tournament selection \cite{tournament3}. This worked fine, but the author decided to adjust this to improve the chance of a good parent being selected. This was accomplished by ordering the population from highest to lowest fitness and requiring the participants to be within the best 75\% of the population. The author found that this improved overall fitness whilst not negatively impacting the diversity of the population.
 
 \subsection{Crossover}
-The algorithm started by using single point crossover at a random position, but this was later changed to create crossover points at regular intervals based on the number of parents involved in the crossover - taking a segment of each parent's genes for the child. 
+Crossover is the process of combining the genes of 2 or more parent chromosomes to make a new child chromosome. To start with, the algorithm used single point crossover at a random position as it allows each parent an equal chance to influence the child's genes. This means that the child's chromosome was split in two, with the first section being based on the first parent's genes and the second section based on the other parent's genes \cite{singlePoint}.
 
-This allowed the algorithm to work with any number of parents. This was based on \cite{multipleParents}, which suggests that breeding more than 2 parents at once can create greater diversity.
+This was later changed to a multi-point crossover solution, where crossover points are placed at regular intervals based on the number of parents involved in the crossover - taking a segment of each parent's genes for the child. This adjustment allowed the algorithm to work with any number of parents. This was based on \cite{multipleParents}, which suggests that breeding more than 2 parents at once can create greater diversity.
 
-This new approach was indeed successful at increasing diversity, but having more than 2 parents increased fitness overall as the best parents were drowned out. As a result of this, solution one reduced the number of parents back to 2, with the option to increase it again for future solutions.
+This new approach was indeed successful at increasing diversity, but having more than 2 parents increased fitness overall, possibly because the best parents were drowned out. As a result of this, solution one reduced the number of parents back to 2, with the option to increase it again for future solutions.
 \subsection{Replacement}
-The replacement strategy for this algorithm is relatively simple; it always replaces the worst member of the population with each new child generated, unless the new child is even worse.
+The replace-worst strategy used by this algorithm is relatively simple; it always replaces the worst member of the population with each new child generated, unless the new child is even worse. This was chosen to rapidly improve the population, but requires a large population size as a smaller population would converge too quickly under this replacement scheme \cite{replacement}.
 
-Initially, the algorithm had a small chance of allowing a worse child to replace the previous worst in the population, with the aim to increase diversity. This was ultimately removed however as it slowed down the algorithm with too much backtracking for no clear benefit.
+Initially, the algorithm always replaced the worst in the population with the new child, even if the new child's fitness was even worse. In theory, this should have increased diversity in the population, but it was ultimately removed as it slowed down the algorithm with too much backtracking and the diversity wasn't increased enough to be worth it.
 
-As the worst member of the population will quickly be replaced, the author decided to mutate it first, just in case it becomes a better solution worth keeping. To do this, a copy of the worst member is mutated and then run through the replacement operator as if it were a new child. 
-
-It will either mutate for the better and replace it's original state, or it will be discarded if mutation makes it worse.
-
-At first, this used the mutation rate, but the author decided to mutate the worst one every time to increase the chance of a good mutation.
+As the worst member of the population will be quickly replaced, the author decided to mutate it first, just in case it becomes a better solution worth keeping. To do this, a copy of the worst member is mutated and then run through the replacement operator as if it were a new child. It will either mutate for the better and replace it's original state, or it will be discarded if mutation makes it worse. At first, this used the mutation rate, but the author decided to mutate the worst one every time to increase the chance of a good mutation.
 
 \subsection{Parameters}
-Early on in the project, the author achieved great results with a mutation rate of 0.5 and a mutation change of 0.2. These values created some excellent fitness results and even landed all 180 rockets in the test set on one occasion. 
+Early on in the project, the author achieved great results with a mutation rate of 0.5 and a mutation change of 0.2. These values created some excellent fitness results and even landed all 180 rockets in the test set on one occasion. Unfortunately, according to \cite{mutateRate}, a high mutation rate can potentially damage the fitness of the best members of the population by mutating too much at once and missing the best solutions. Therefore, the author worked to achieve similar results with lower mutation values by improving the algorithm and adjusting other parameters. 
 
-Unfortunately, according to \cite{mutateRate}, a high mutation rate can potentially damage the fitness of the best members of the population by mutating too much at once and missing the best solutions.
-
-Therefore, the author worked to achieve similar results with lower mutation values by improving the algorithm and adjusting other parameters.
-
-For solution one, the mutation rate was set to 0.5 and the mutation change to 0.12. These were eventually revised to a more even 0.2 for both values in solution four.
+For solution one, the mutation rate was set to 0.5 and the mutation change to 0.12. These were eventually revised to a more even 0.2 for both values in solution four. This adjustment made the mutation change a factor of the minimum and maximum gene values, which are -1 and +1 respectively - allowing the full range to be explored.
 
 According to \cite{hiddenLayers}, the number of hidden layers should be 1 for most problems and the number of nodes per hidden layer should be between the number of input nodes (5 in our case) and the number of output nodes (3 in our case). Following this rule, 4 is the optimal amount and therefore is the amount chosen for this algorithm.
 
+The population size was changed multiple times as part of the algorithm's development, settling on 80 by solution four. More details on the changes to this parameter can be found in the Experiments \& Analysis section.
 
 \section{Experiments \& Analysis}
 The algorithm was initially tested by running it in the GUI and watching to see how well it performed on the graph. This approach allowed the author to quickly evaluate the results and make changes. 
-
-Near the start of the process, the author created a very effective algorithm by setting the mutation rate and change parameters to very high levels. According to the lecturer, this was considered an incorrect approach, so the author sought to achieve similar results with less extreme mutation values.
 
 The author created a solution to use as a benchmark for further improvement. This solution, referred to as solution one in this report, was the result of some initial experimentation and reading to get a good baseline to build from.
 
 The table below shows the results of solution one across 10 runs of the algorithm. The average and best fitness values are from the training set, whilst 'fitness with test' referrers to the average fitness when applied to the test set.
 
-\tablefirsthead{\toprule \begin{tabular}{p{0.1\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}}
+\tablefirsthead{\toprule \begin{tabular}{@{}p{0.1\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}}
 Run&Average Fitness&Best Fitness&Fitness with test
 \end{tabular}\\ \midrule}
 %
@@ -96,7 +94,7 @@ Run&Average Fitness&Best Fitness&Fitness with test
 \multicolumn{4}{r}%
 {{\bfseries  Continued from previous column}} \\
 \toprule
-\begin{tabular}{p{0.1\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}}
+\begin{tabular}{@{}p{0.1\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}}
 Run&Average Fitness&Best Fitness&Fitness with test
 \end{tabular}\\ \midrule}
 %
@@ -107,9 +105,9 @@ Run&Average Fitness&Best Fitness&Fitness with test
 }
 \tablelasttail{
     \hline
-    \multicolumn{4}{c}{{\textbf{Table 1: }Solution One}}
+    \multicolumn{4}{c}{{\textbf{Table 1: Solution One}}}
 }
-\begin{supertabular}{p{0.1\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}}
+\begin{supertabular}{@{}p{0.1\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}}
     1&0.11851819&0.109464577&0.258081383\\
     2&0.028939944&0.015180927&0.017754965\\
     3&0.04011759&0.02400237&0.035088488\\
@@ -126,7 +124,7 @@ Run&Average Fitness&Best Fitness&Fitness with test
 \end{supertabular}%
 \\
 
-As shown below, the best fitness graphs from solution one typically resemble a cotangent curve; fitness decreases very rapidly at the start, slowing down in the middle and then rapidly decreases again towards the end.
+As shown below, the best fitness graphs from solution one typically resemble a cotangent curve; fitness decreases very rapidly at the start, slowing down in the middle and then rapidly decreases again towards the end. This is an issue as occasionally the second decline started too late and would not reach a good fitness before the evaluation limit was reached.
 
 \begin{figure}[H]
 \includegraphics[width=\columnwidth]{SolOneGraph.png}
@@ -144,13 +142,13 @@ The figure below shows solution one's box plot, which indicates a very wide rang
 \caption[width=\columnwidth]{Solution One has a very wide range of results, making it unpredictable} \label{SolOneBox}
 \end{figure}
 
-The boxplots use an X to indicate the mean and a line to indicate the median. Solution one has a large spread of results, with an IQR of roughly 0.029 to 0.101. This makes the results quite inconsistent, with the test dataset's results having a huge IQR of roughly 0.02 to 0.221.
+The boxplots use an X to indicate the mean and a line to indicate the median. Solution one has a large spread of results, with an average fitness Inter Quartile Range of approximately 0.038 to 0.105. This makes the results quite inconsistent, with the test dataset's results having a huge IQR of roughly 0.02 to 0.221.
 
 The population size was modified many times when trying to create solution one, settling on a size of 40. As shown above, the first solution had a very wide range of results. The author theorised that this was due to the large population not changing fast enough, causing the breeding of bad parents, which slowed the overall improvement of the population.
 
 To counteract this, solution two halved the population for a size of 20, aiming to fix the range issue. Unfortunately, whilst this adjustment helped reduce the variance of the results, the average fitness actually increased for all three metrics (average, best and test dataset) as shown in table 2 below.
 
-\tablefirsthead{\toprule \begin{tabular}{p{0.1\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}}
+\tablefirsthead{\toprule \begin{tabular}{@{}p{0.1\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}}
 Run&Average Fitness&Best Fitness&Fitness with test
 \end{tabular}\\ \midrule}
 %
@@ -158,7 +156,7 @@ Run&Average Fitness&Best Fitness&Fitness with test
 \multicolumn{4}{r}%
 {{\bfseries  Continued from previous column}} \\
 \toprule
-\begin{tabular}{p{0.1\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}}
+\begin{tabular}{@{}p{0.1\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}}
 Run&Average Fitness&Best Fitness&Fitness with test
 \end{tabular}\\ \midrule}
 %
@@ -169,9 +167,9 @@ Run&Average Fitness&Best Fitness&Fitness with test
 }
 \tablelasttail{
     \hline
-    \multicolumn{4}{c}{{\textbf{Table 2: }Solution Two}}
+    \multicolumn{4}{c}{{\textbf{Table 2: Solution Two}}}
 }
-\begin{supertabular}{p{0.1\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}}
+\begin{supertabular}{@{}p{0.1\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}}
     1&0.034153283&0.015601448&0.036587929\\
     2&0.050594412&0.026087938&0.089452558\\
     3&0.105339055&0.101256037&0.224750837\\
@@ -203,7 +201,7 @@ At this point, the author created solution three, with a population of 80 and wi
 
 This solution provided the best results yet, decreasing all of the fitness metrics by a considerable amount and drastically reducing the range, as shown in table 3 below.
 
-\tablefirsthead{\toprule \begin{tabular}{p{0.1\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}}
+\tablefirsthead{\toprule \begin{tabular}{@{}p{0.1\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}}
 Run&Average Fitness&Best Fitness&Fitness with test
 \end{tabular}\\ \midrule}
 %
@@ -211,7 +209,7 @@ Run&Average Fitness&Best Fitness&Fitness with test
 \multicolumn{4}{r}%
 {{\bfseries  Continued from previous column}} \\
 \toprule
-\begin{tabular}{p{0.1\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}}
+\begin{tabular}{@{}p{0.1\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}}
 Run&Average Fitness&Best Fitness&Fitness with test
 \end{tabular}\\ \midrule}
 %
@@ -222,9 +220,9 @@ Run&Average Fitness&Best Fitness&Fitness with test
 }
 \tablelasttail{
     \hline
-    \multicolumn{4}{c}{{\textbf{Table 3: }Solution Three}}
+    \multicolumn{4}{c}{{\textbf{Table 3: Solution Three}}}
 }
-\begin{supertabular}{p{0.1\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}}
+\begin{supertabular}{@{}p{0.1\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}}
     1&0.051645209&0.027799086&0.05979013\\
     2&0.08541211&0.060828927&0.142983012\\
     3&0.031970246&0.017267509&0.025337601\\
@@ -249,7 +247,7 @@ As mentioned in section 2.4, the author wanted to limit the mutation values as m
 
 These new values formed solution four. See the table below for the values produced by this solution.
 
-\tablefirsthead{\toprule \begin{tabular}{p{0.1\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}}
+\tablefirsthead{\toprule \begin{tabular}{@{}p{0.1\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}}
 Run&Average Fitness&Best Fitness&Fitness with test
 \end{tabular}
 \\ \midrule}
@@ -258,7 +256,7 @@ Run&Average Fitness&Best Fitness&Fitness with test
 \multicolumn{4}{r}%
 {{\bfseries  Continued from previous column}} \\
 \toprule
-\begin{tabular}{p{0.1\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}}
+\begin{tabular}{@{}p{0.1\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}}
 Run&Average Fitness&Best Fitness&Fitness with test
 \end{tabular}\\ \midrule}
 %
@@ -269,9 +267,9 @@ Run&Average Fitness&Best Fitness&Fitness with test
 }
 \tablelasttail{
     \hline
-    \multicolumn{4}{c}{{\textbf{Table 4: }Solution Four}}
+    \multicolumn{4}{c}{{\textbf{Table 4: Solution Four}}}
 }
-\begin{supertabular}{p{0.1\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}}
+\begin{supertabular}{@{}p{0.1\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}p{0.25\columnwidth}}
     1&0.035568813&0.015935681&0.031763971\\
     2&0.029870228&0.018154525&0.023431724\\
     \textbf{3}&\textbf{0.12670661}&\textbf{0.123122264}&\textbf{0.333836236}\\
@@ -304,7 +302,7 @@ As shown by the line that goes through the box plots, the median value is much l
 
 At this point the project time was nearly over, ideas for further improvement of the algorithm are in section 5.
 
-The following graphs plot the solutions against each other, with each solution as a different series. This approach allows each solution to be compared easily and also reduced the risk of bad outliers skewing results by showing each run individually.
+The following graphs plot the solutions against each other, with each solution as a different series. This approach allows each solution to be compared easily and also reduces the risk of bad outliers skewing results by showing each run individually.
 
 \begin{figure}[H]
 \includegraphics[width=\columnwidth]{averageFitnessAll.png}
@@ -343,15 +341,37 @@ Figure \ref{exponential} below shows what an average run looks like with solutio
 \end{figure}
 
 \section{Conclusions}
-This project was quite challenging as it required a lot of experimentation to find good results. Solution represents the first instance of good results, with the other three solutions representing refinements based on scientific analysis.
+This project was quite challenging as it required a lot of experimentation to find good results. Solution one represents the first instance of good results, with the other three solutions representing refinements based on scientific analysis. The table below details solution four, including the fitness values and the activation function used by the neural network.
 
-The analysis made clear what properties had the most bearing on the project: The population size made a huge difference to the project, with a bigger population allowing for more diversity and better results overall.
+\tablefirsthead{\toprule \begin{tabular}{@{}p{0.1\columnwidth}p{0.15\columnwidth}p{0.05\columnwidth}p{0.1\columnwidth}p{0.1\columnwidth}p{0.1\columnwidth}p{0.1\columnwidth}}
+Set&Average/ Best Fitness&Pop Size&Mut. Rate/ Change&Hidden Nodes&Min/ Max gene&Activation function
+\end{tabular}
+\\ \midrule}
+%
+\tablelasttail{
+    \hline
+    \multicolumn{7}{c}{{\textbf{Table 5: }Details of the final solution}}
+}
+\begin{supertabular}{@{}p{0.1\columnwidth}p{0.15\columnwidth}p{0.05\columnwidth}p{0.1\columnwidth}p{0.1\columnwidth}p{0.1\columnwidth}p{0.1\columnwidth}}
+    Training&0.058602014 0.01809619&80&0.2/0.2&4&-1/+1&Step\\
+    Test&0.106562971 0.023431724&80&0.2/0.2&4&-1/+1&Step\\
+    
+\end{supertabular}%
+\\
+
+This project was successful as the average and best fitness values were reduced substantially from the original solution. The range of results was also reduced, making the results more reliable.
+
+The experiments and analysis conducted for this project made clear which properties had the most bearing on the project. The population size made a huge difference to the project, with a bigger population allowing for more diversity and better results overall.
 
 Other conclusions can be drawn from the use of mutation rate and mutation change. As mentioned, the author managed to land all 180 rockets by upping these parameters to extreme levels, so these parameters have a large impact on the fitness, but shouldn't be over used as they can cause the best solutions to be skipped over. Also, the mutation change should be a factor of the minimum/maximum gene values.
 
-Having lots of parents for crossover may create greater diversity, but at the cost of diluting the best parent's genes with each parent added. Mutating the worst member of the population is only a good thing when using simple replacement.
+Having lots of parents for crossover may create greater diversity, but at the cost of diluting the best parent's genes with each parent added. The crossover implementation worked better when using a fixed crossover point as opposed to a random one, which was interesting as a random crossover point seems to be standard practice \cite{singlePoint}.
 
 It is important to pay attention to the median of a dataset when comparing it to others, as was the case in solution three, which was actually worse than solution one in some ways - median being one of them. Similarly, large outliers can skew a dataset and make a solution look worse on average; showing each run individually is a good way to avoid this issue.
+
+As discussed in section 2, the tournament selection method was chosen due to it's simplicity, with the intention to go back to it should the algorithm not perform well. Of course, comparisons between these algorithms do exist already in literature, but they are often used in different circumstances and contexts, which were hard to apply to this algorithm. 
+
+Therefore, the best way to scientifically compare selection methods such as roulette and tournament would be swapping the selection method within solution four and recording the results. This would allow direct comparison between the methods in the context of the existing solution, without the risk of other factors interfering with the outcome.
 \section{Future work}
 There are variables and concepts that haven't been explored in this project that could improve the algorithm even further, ideally reducing the fitness to 0.01 or lower. The range could also be reduced to decrease the chance of a bad run or an extreme outlier.
 
@@ -360,6 +380,9 @@ As mentioned in section 2.2, more than 2 parents in each crossover is already po
 Another area that wasn't fully explored was the mutation of the worst member of the population. What if more were mutated at once, such as the top 5 highest fitness? This could be particularly relevant if the population was increased beyond 80, as just mutating one bad member per evaluation will have less of an impact as the population size increases.
 
 Increasing the population further may also improve results as the highest population size tested was 80, the size that the final solution uses. This would need to be increased with caution, as according to \cite{popSize} 'If the population is too large . . . undesired computational resources may be incurred and the waiting time for a fitness improvement may be too long'. The same article discusses the use of a dynamic population size, which may be another avenue for improvement.
+
+The mutation, initialisation and activation functions were all left unaltered by this project (Except for a small tweak to allow the worst member to ignore the mutation rate). These could be investigated to improve results further in the future.
+
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{Bibliography} 
 
